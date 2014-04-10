@@ -23,10 +23,15 @@
  */
 package shpviewer;
 
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.MultiLineString;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
+import org.geotools.data.simple.SimpleFeatureCollection;
+import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.Layer;
@@ -35,17 +40,18 @@ import org.geotools.styling.SLD;
 import org.geotools.styling.Style;
 import org.geotools.swing.JMapFrame;
 import org.geotools.swing.data.JFileDataStoreChooser;
+import org.opengis.feature.simple.SimpleFeature;
 
 /**
  * 指定したESRI shape形式の地図データファイルを読み込み、地図データを可視化する。
- * 
+ *
  * GISライブラリにGeoTools 8.xを利用している。
  */
 public class ShapefileViewer {
 
     /**
      * プログラムのエントリメソッド。
-     * 
+     *
      * @param args the command line arguments
      */
     public static void main(String[] args) throws IOException {
@@ -58,13 +64,45 @@ public class ShapefileViewer {
 
         MapContent map = new MapContent();
         map.setTitle("簡素なシェープファイルビューア");
-        
+
         // 表示スタイルを作成しレイヤを生成、MapContentのレイヤに追加する
         Style style = SLD.createSimpleStyle(featureSource.getSchema());
         Layer layer = new FeatureLayer(featureSource, style);
         map.addLayer(layer);
-        
+
         JMapFrame.showMap(map);
+
+        printFeatureSource(featureSource);
     }
-    
+
+    private static void printFeatureSource(SimpleFeatureSource featureSource) throws IOException {
+        SimpleFeatureCollection features = featureSource.getFeatures();
+        try (SimpleFeatureIterator iter = features.features()) {
+            boolean isFeaturePrinted = false;
+            while (iter.hasNext()) {
+                SimpleFeature feature = iter.next();
+                //feature.getAttributes().stream().forEach(System.out::println);
+                //System.out.println(feature.getName());
+                //System.out.println(feature.getDefaultGeometry().getClass().getName());
+                if (!isFeaturePrinted) {
+                    printFeature(feature);
+                    isFeaturePrinted = true;
+                }
+            }
+        }
+    }
+
+    private static void printFeature(SimpleFeature feature) {
+        System.out.println("====== Feature Details ======");
+        System.out.println("class name of feature is " + feature.getClass().getName());
+        Object geom = feature.getDefaultGeometry();
+        if (geom instanceof MultiLineString) {
+            MultiLineString mls = (MultiLineString) geom;
+            Coordinate[] vertices = mls.getCoordinates();
+            System.out.println("number of vertex is " + vertices.length);
+            System.out.println("1st vertex, x = " + vertices[0].x + ", y = " + vertices[0].y);
+        }
+
+    }
+
 }
